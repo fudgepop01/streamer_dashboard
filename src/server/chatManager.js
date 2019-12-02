@@ -24,7 +24,7 @@ class picartoChatManager extends EventEmitter {
     const messageHandler = (msg, protocol) => {
       const msgType = protocol.lookupType(msgTypes[msg[0]]);
       const decoded = msgType.decode(msg.slice(1));
-      console.log(decoded);
+      // console.log(decoded);
       this.emit(msgTypes[msg[0]], msgType.decode(msg.slice(1)));
     }
 

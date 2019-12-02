@@ -17,6 +17,8 @@
     editableTexts = data.filter((el) => el.role === "EditableText");
   })
 
+  socket.on("ChatMessage", (msg) => console.log(msg));
+
   const handleChange = (evt) => {
     socket.emit("changeLayout", evt.target.value);
   }
