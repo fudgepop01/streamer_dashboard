@@ -4,12 +4,14 @@ import express from 'express';
 import socketio from 'socket.io';
 import { fetchToken, connectToWebSocket } from './server/auth';
 import picartoChatManager from './server/chatManager'
-import { readdir } from 'fs';
-import { promisify } from 'util';
+import ControlSocket from './server/socketTypes/control';
+import DisplaySocket from './server/socketTypes/display';
 
 import compression from 'compression';
 import * as sapper from '@sapper/server';
 
+import { readdir } from 'fs';
+import { promisify } from 'util';
 
 const pReaddir = promisify(readdir);
 
@@ -39,58 +41,29 @@ http.listen(PORT, err => {
 	// 	io.emit("ChatMessage", msg);
 	// })
 
-	const connections = {};
+	const controlSockets = {};
+	const displaySockets = {};
 	io.on("connection", async (socket) => {	
-		let recievedLayoutData = false;
-
-		socket.emit("initialize", await pReaddir(`${__dirname}/../../../static/svg`));
-		connections[socket.id] = socket;
+    socket.emit("initialize", await pReaddir(`${__dirname}/../../../static/svg`));
 		socket.on("pageName", (pageName) => {
-			socket.pageName = pageName;
-		})
-
-		socket.on("changeLayout", (layout) => {
-			recievedLayoutData = false;
-			for (const [key, val] of Object.entries(connections)) {
-				if (val.pageName === 'display') {
-					val.emit("changeLayout", layout);
-				}
+			let typedSocket;
+			switch(pageName) {
+				case 'controls': 
+					typedSocket = new ControlSocket(socket, controlSockets, displaySockets);
+					controlSockets[typedSocket.socket.id] = typedSocket;
+					break;
+				case 'display':
+					typedSocket = new DisplaySocket(socket, controlSockets, displaySockets);
+					displaySockets[typedSocket.socket.id] = typedSocket;
+					break;
 			}
-		})
-		socket.on("execScript", (scr) => {
-			for (const [key, val] of Object.entries(connections)) {
-				if (val.pageName === 'display') {
-					val.emit("execScript", scr);
-				}
-			}
-		})
-		socket.on("transition", () => {
-			for (const [key, val] of Object.entries(connections)) {
-				if (val.pageName === 'display') {
-					val.emit("transition");
-				}
-			}
-		})
-		socket.on("layoutData", (data) => {
-			if (!recievedLayoutData) {
-				for (const [key, val] of Object.entries(connections)) {
-					if (val.pageName === 'controls') {
-						val.emit("layoutData", data);
-						recievedLayoutData = true;
-					}
-				}
-			}
-		})
-
-		socket.on("disconnect", () => {
-			delete connections[socket.id];
 		})
 	})
 
 	picartoManager.on("ChatMessage", (msg) => {
 		if (msg.message === "!ping") picartoManager.sendMessage("pong!");
-		for (const [key, val] of Object.entries(connections)) {
-			val.emit("ChatMessage", msg);
+		for (const conn of Object.values(connections)) {
+			conn.emit("ChatMessage", msg);
 		}
 	})
 

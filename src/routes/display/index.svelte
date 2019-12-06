@@ -2,7 +2,7 @@
   import Transition from '../../components/transition.svelte';
 
   import io from 'socket.io-client';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import anime from 'animejs/lib/anime.es.js';
   window["anime"] = anime;
 
@@ -32,9 +32,8 @@
       // console.log(el);
       if (el.id.includes("$$")) {
         let id = el.id.substring(0, el.id.indexOf('$$'));
-				let role = el.id.substring(el.id.indexOf('$$') + 2, el.id.indexOf('$$$'));
-        let metaData = JSON.parse(atob(el.id.substring(el.id.indexOf('$$$') + 3)));
-
+        let role = el.id.substring(el.id.indexOf('$$') + 2);
+        
         let calculated = {};
         if (role === "EditableText") {
           let ch = el.children[0];
@@ -52,17 +51,29 @@
         }
 
         dynamicElements.push({
-          id, role, metaData, calculated
+          id, role, calculated
         });
 
         el.setAttribute("id", id);
-        console.log(el);
+        // console.log(el);
       }
     }
 
     let d = document.createElement("div")
     d.appendChild(frag);
-    currentLayout = d.innerHTML;
+    currentLayout = d;
+
+    await tick();
+
+    for (const [i, el] of Object.entries(dynamicElements)) {
+      let bbox = document.getElementById(el.id).getBBox();
+      dynamicElements[i].calculated.bbox = {
+        width: bbox.width,
+        height: bbox.height,
+        x: bbox.x,
+        y: bbox.y
+      }
+    }
 
     socket.emit("layoutData", dynamicElements);
   });
@@ -72,7 +83,7 @@
   })
 </script>
 
-{@html currentLayout}
+{@html currentLayout.innerHTML}
 {#if transition}
   <Transition bind:transition={transition} parrotCount={10}/>
 {/if}

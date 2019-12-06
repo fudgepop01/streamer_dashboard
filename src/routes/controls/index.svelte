@@ -1,6 +1,9 @@
 <script>
+  import { onMount } from 'svelte';
+
   import io from 'socket.io-client';
   import ETC from '../../components/controllers/EditableTextControls.svelte';
+  import { editableTexts } from './controlStores';
 
   const socket = io();
   let layouts = [];
@@ -11,10 +14,9 @@
   })
 
   let layoutData = [];
-  let editableTexts = [];
   socket.on("layoutData", (data) => {
     layoutData = data;
-    editableTexts = data.filter((el) => el.role === "EditableText");
+    editableTexts.set(data.filter((el) => el.role === "EditableText"));
   })
 
   socket.on("ChatMessage", (msg) => console.log(msg));
@@ -31,6 +33,33 @@
   const runTransition = () => {
     socket.emit("transition");
   }
+
+
+  onMount(async () => {
+    let jsPanel = (await import("jspanel4/es6module/jspanel.js")).jsPanel;
+    jsPanel.create({
+      theme: 'primary',
+      headerTitle: 'Text Editor',
+      borderRadius: '2px',
+      theme: 'dark',
+      position: 'center-top 0 58',
+      contentSize: '250 250',
+      setStatus: 'minimized',
+      headerControls: {
+        close: 'remove',
+      },
+      callback() {
+        new ETC({
+          target: this.content,
+          props: {
+            submitScript,
+            elementStore: editableTexts
+          }
+        })
+      }
+    })
+  })
+
 </script>
 
 <style>
@@ -52,7 +81,7 @@ enter a script to execute:<br/>
 <button on:click={() => submitScript(scriptingWindow)}>submit script</button><br/>
 <button on:click={runTransition}>run transition</button><br/>
 
-<ETC submitScript={submitScript} bind:elementList={editableTexts}/>
+<!-- <ETC submitScript={submitScript} bind:elementList={editableTexts}/> -->
 
 <br/>
 <span style="white-space: pre; font-family: 'Roboto Mono';">
