@@ -36,7 +36,7 @@ class DisplaySocket {
 
   layoutData(data) {
     for (const control of Object.values(this.controlSockets)) {
-      control.layoutData(data);
+      control.layoutData(data, this.socket.id);
     }
   }
 

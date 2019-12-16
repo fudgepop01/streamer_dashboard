@@ -7,10 +7,7 @@
   })
 
   export let submitScript;
-  export let elementStore;
-
-  let elementList = [];
-  elementStore.subscribe(value => elementList = value);
+  export let elementList;
 
   let showOptions = false;
   let selectedElement = -1;
@@ -26,91 +23,51 @@
   // SCRIPT ------------------------------------------------
 
   const buildAndSubmit = () => {
-    let inProgress = document.createElementNS(null, 'text');
-    let calculated = elementList[selectedElement].calculated;
-
-    for (const [i, line] of newContent.split('\n').entries()) {
-      let tspan = document.createElementNS("http://www.w3.org/2000/svg", 'tspan');
-
-      tspan.setAttributeNS(null, 'x', calculated.xPos);
-      if (calculated.multiLine) tspan.setAttributeNS(null, 'y', calculated.firstLineYPos + calculated.lineHeight * i);
-      else tspan.setAttributeNS(null, 'y', calculated.firstLineYPos);
-
-      tspan.textContent = line;
-      Splitting({
-        target: tspan,
-        by: 'chars'
-      });
-      tspan.innerHTML = tspan.innerHTML.replace(/<span/g, '<tspan').replace(/<\/span>/g, '</tspan>');
-      for (const char of tspan.querySelectorAll('tspan.char')) {
-        char.style.setProperty("opacity", "0");
-        char.style.setProperty("fill", fillFrom);
+    let oldOut = {
+      opacity: 0,
+      duration: 500,
+      easing: 'easeInOutExpo',
+      delay: {
+        ms: 50, 
+        args: {from: 'last'}
       }
-      inProgress.appendChild(tspan);
     }
 
-    let out = `
+    let newStart = {
+      opacity: 0,
+      fill: fillFrom,
+      scaleX: 5
+    }
 
-      let spans = document.getElementById('${elementList[selectedElement].id}').children[0];
-      let res = Splitting({
-        target: spans,
-        by: 'chars'
-      })
-      spans.innerHTML = spans.innerHTML.replace(/<span/g, '<tspan').replace(/<\\/span>/g, '</tspan>')
-      console.log(res[0].chars);
-      
-      if (${animate}) {
-        await anime({
-          targets: spans.querySelectorAll('tspan.char'),
-          opacity: 0,
-          duration: 500,
-          easing: 'easeInOutExpo',
-          delay: anime.stagger(50, {from: 'last'})
-        }).finished;
-        spans.innerHTML = \`${inProgress.innerHTML}\`;
-
-        if ('${alignment}' !== 'left') {
-          for (const ch of spans.children) {
-            if ('${alignment}' == 'right') ch.setAttributeNS(null, 'x', ${calculated.bbox.x + calculated.bbox.width} - ch.getComputedTextLength()) 
-            else ch.setAttributeNS(null, 'x', ${calculated.bbox.x + calculated.bbox.width/2} - ch.getComputedTextLength()/2) 
-          }
-        }
-
-        for (const ch of spans.querySelectorAll('tspan.char')) {
-          ch.setAttributeNS(null, "dx", 50)
-        }
-
-        await anime({
-          targets: spans.querySelectorAll('tspan.char'),
-          opacity: {
-            value: 1,
-            duration: 10,
-          },
-          fill: '${fillTo}',
-          dx: '0',
-          duration: 500,
-          easing: 'easeInOutExpo',
-          delay: anime.stagger(50, {from: 'first'})
-        }).finished;
-      } else {
-        spans.innerHTML = \`${inProgress.innerHTML}\`;
-
-        if ('${alignment}' === 'right') {
-          for (const ch of spans.children) {
-            ch.setAttributeNS(null, 'x', ${calculated.bbox.x + calculated.bbox.width} - ch.getBBox().width) 
-          }
-        }
-
-        for (const ch of spans.querySelectorAll('tspan.char')) {
-          ch.setAttributeNS(null, "dx", "0");
-          ch.style.setProperty("fill", "${fillTo}");
-          ch.style.setProperty("opacity", "1");
-        }
+    let newEnd = {
+      opacity: {
+        value: 1,
+        duration: 10,
+      },
+      fill: fillTo,
+      dx: '0',
+      scaleX: 1,
+      duration: 500,
+      easing: 'easeInOutExpo',
+      delay: {
+        ms: 50, 
+        args: {from: 'first'}
       }
-      
-    `;
+    }
 
-    submitScript(out);
+    submitScript(`
+      document.getElementById('${$elementList[selectedElement].id}')
+      .replaceText(
+        \`${newContent}\`,
+        ${JSON.stringify({
+          animate,
+          alignment,
+          oldOut,
+          newStart,
+          newEnd
+        })}
+      )
+    `);
   }
 </script>
 
@@ -148,8 +105,8 @@
   <button class="options-btn" on:click={() => showOptions = !showOptions}>{showOptions ? 'return' : 'options'}</button>
   {#if !showOptions}
     <select bind:value={selectedElement}>
-    <option selected disabled value={-1}>...</option>
-      {#each elementList as el, i}
+      <option selected disabled value={-1}>...</option>
+      {#each $elementList as el, i}
         <option value={i}>{el.id}</option>
       {/each}
     </select>

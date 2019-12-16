@@ -49,6 +49,7 @@ http.listen(PORT, err => {
 			let typedSocket;
 			switch(pageName) {
 				case 'controls': 
+					console.log('derp');
 					typedSocket = new ControlSocket(socket, controlSockets, displaySockets);
 					controlSockets[typedSocket.socket.id] = typedSocket;
 					break;
@@ -61,9 +62,12 @@ http.listen(PORT, err => {
 	})
 
 	picartoManager.on("ChatMessage", (msg) => {
-		if (msg.message === "!ping") picartoManager.sendMessage("pong!");
-		for (const conn of Object.values(connections)) {
-			conn.emit("ChatMessage", msg);
+		// if (msg.message === "!ping") picartoManager.sendMessage("pong!");
+		for (const conn of Object.values(controlSockets)) {
+			conn.socket.emit("ChatMessage", msg);
+		}
+		for (const conn of Object.values(displaySockets)) {
+			conn.socket.emit("ChatMessage", msg);
 		}
 	})
 

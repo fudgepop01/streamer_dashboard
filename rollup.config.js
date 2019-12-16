@@ -34,7 +34,8 @@ export default {
 			svelte({
 				dev,
 				hydratable: true,
-				emitCss: true
+				emitCss: true,
+				accessors: true
 			}),
 			resolve({
 				browser: true,

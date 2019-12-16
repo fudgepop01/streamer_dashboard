@@ -25,6 +25,14 @@ class ControlSocket {
     socket.on("execScript", (scr) => this.execScript(scr));
     socket.on("transition", () => this.transition());
     socket.on("disconnect", () => this.disconnect());
+    socket.on("getNumSockets", () => this.getNumSockets());
+  }
+
+  getNumSockets() {
+    this.socket.emit("numSockets", {
+      control: Object.keys(this.controlSockets).length, 
+      display: Object.keys(this.displaySockets).length
+    })
   }
 
   changeLayout(layout) {
@@ -36,9 +44,13 @@ class ControlSocket {
     }
   }
 
-  execScript(scr) {
-    for (const display of Object.values(this.displaySockets)) {
-      display.execScript(scr);
+  execScript({scr, id}) {
+    if (id) {
+      this.displaySockets[id].execScript(scr);
+    } else {
+      for (const display of Object.values(this.displaySockets)) {
+        display.execScript(scr);
+      }
     }
   }
 
@@ -48,10 +60,8 @@ class ControlSocket {
     }
   }
 
-  layoutData(data) {
-    if (this.receivedLayoutData) return;
-    this.receivedLayoutData = true;
-    this.socket.emit("layoutData", data);
+  layoutData(data, id) {
+    this.socket.emit("layoutData", {data, id});
   }
 
   disconnect() {
