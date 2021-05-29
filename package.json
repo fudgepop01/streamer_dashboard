@@ -25,7 +25,7 @@
     "socket.io-client": "^2.2.0",
     "twitch": "^3.4.3",
     "twitch-chat-client": "^3.4.3",
-    "ws": "^7.1.2"
+    "ws": "^7.4.6"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0",
